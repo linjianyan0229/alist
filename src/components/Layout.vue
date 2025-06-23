@@ -5,7 +5,7 @@
       <div class="header-content">
         <!-- 左侧Logo区域 -->
         <div class="logo-section">
-          <div class="logo">
+          <div class="logo" @click="handleLogoClick">
             <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M3 7V17C3 18.1046 3.89543 19 5 19H19C20.1046 19 21 18.1046 21 17V9C21 7.89543 20.1046 7 19 7H13L11 5H5C3.89543 5 3 5.89543 3 7Z" 
                     fill="currentColor"/>
@@ -13,11 +13,6 @@
             <span class="logo-text">AList</span>
           </div>
           <div class="breadcrumb">
-            <span class="breadcrumb-item">
-              <el-icon><house /></el-icon>
-              主页
-            </span>
-            <span v-if="currentPath" class="breadcrumb-separator">/</span>
             <span v-if="currentPath" class="breadcrumb-item">{{ currentPath }}</span>
           </div>
         </div>
@@ -32,7 +27,7 @@
               @click="handleViewChange('grid')"
               title="网格视图"
             >
-              <el-icon><grid /></el-icon>
+              <el-icon><Grid /></el-icon>
             </button>
             <button 
               class="view-btn"
@@ -40,7 +35,7 @@
               @click="handleViewChange('list')"
               title="列表视图"
             >
-              <el-icon><list /></el-icon>
+              <el-icon><List /></el-icon>
             </button>
             <button 
               class="view-btn"
@@ -48,7 +43,7 @@
               @click="handleViewChange('image')"
               title="图片视图"
             >
-              <el-icon><picture /></el-icon>
+              <el-icon><Picture /></el-icon>
             </button>
           </div>
 
@@ -60,23 +55,23 @@
             <el-dropdown @command="handleCommand" trigger="click">
               <div class="user-info">
                 <el-avatar :size="32" class="user-avatar">
-                  <el-icon><user /></el-icon>
+                  <el-icon><User /></el-icon>
                 </el-avatar>
                 <span class="username">{{ userInfo.username }}</span>
-                <el-icon class="dropdown-icon"><arrow-down /></el-icon>
+                <el-icon class="dropdown-icon"><ArrowDown /></el-icon>
               </div>
               <template #dropdown>
                 <el-dropdown-menu class="user-dropdown">
                   <el-dropdown-item command="profile">
-                    <el-icon><user /></el-icon>
+                    <el-icon><User /></el-icon>
                     个人资料
                   </el-dropdown-item>
                   <el-dropdown-item command="settings">
-                    <el-icon><setting /></el-icon>
+                    <el-icon><Setting /></el-icon>
                     设置
                   </el-dropdown-item>
                   <el-dropdown-item divided command="logout">
-                    <el-icon><switch-button /></el-icon>
+                    <el-icon><SwitchButton /></el-icon>
                     退出登录
                   </el-dropdown-item>
                 </el-dropdown-menu>
@@ -124,7 +119,7 @@ const emit = defineEmits(['view-change', 'update-path'])
 const props = defineProps({
   viewMode: {
     type: String,
-    default: 'grid'
+    default: 'list'
   },
   currentPath: {
     type: String,
@@ -222,6 +217,12 @@ onMounted(() => {
   }
   fetchUserProfile()
 })
+
+// 处理Logo点击
+const handleLogoClick = () => {
+  // 实现返回首页的功能
+  router.push('/')
+}
 </script>
 
 <style scoped>
@@ -265,6 +266,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logo:hover {
+  opacity: 0.8;
 }
 
 .logo-icon {

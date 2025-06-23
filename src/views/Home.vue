@@ -4,11 +4,11 @@
     <div class="toolbar">
       <div class="toolbar-left">
         <button class="action-btn primary" @click="uploadFile">
-          <el-icon><upload-filled /></el-icon>
+          <el-icon><UploadFilled /></el-icon>
           <span>上传文件</span>
         </button>
         <button class="action-btn" @click="createFolder">
-          <el-icon><folder-add /></el-icon>
+          <el-icon><FolderAdd /></el-icon>
           <span>新建文件夹</span>
         </button>
       </div>
@@ -17,10 +17,13 @@
           <el-input
             v-model="searchQuery"
             placeholder="搜索文件或文件夹..."
-            prefix-icon="Search"
             clearable
             class="search-input"
-          />
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
         </div>
       </div>
     </div>
@@ -35,19 +38,20 @@
           class="file-card"
           @click="handleItemClick(item)"
           @dblclick="handleItemDoubleClick(item)"
+          @contextmenu="handleRightClick($event, item)"
         >
           <div class="file-icon">
             <el-icon v-if="item.type === 'folder'" class="folder-icon">
-              <folder />
+              <Folder />
             </el-icon>
             <el-icon v-else-if="isImageFile(item)" class="image-icon">
-              <picture />
+              <Picture />
             </el-icon>
             <el-icon v-else-if="isVideoFile(item)" class="video-icon">
-              <video-play />
+              <VideoPlay />
             </el-icon>
             <el-icon v-else class="file-icon-default">
-              <document />
+              <Document />
             </el-icon>
           </div>
           <div class="file-info">
@@ -63,9 +67,27 @@
       <!-- 列表视图 -->
       <div v-else-if="viewMode === 'list'" class="list-view">
         <div class="list-header">
-          <div class="list-col name">名称</div>
-          <div class="list-col size">大小</div>
-          <div class="list-col date">修改时间</div>
+          <div class="list-col name sortable" @click="handleSort('name')">
+            名称
+            <el-icon v-if="sortBy === 'name'" class="sort-icon">
+              <ArrowUp v-if="sortOrder === 'asc'" />
+              <ArrowDown v-else />
+            </el-icon>
+          </div>
+          <div class="list-col size sortable" @click="handleSort('size')">
+            大小
+            <el-icon v-if="sortBy === 'size'" class="sort-icon">
+              <ArrowUp v-if="sortOrder === 'asc'" />
+              <ArrowDown v-else />
+            </el-icon>
+          </div>
+          <div class="list-col date sortable" @click="handleSort('date')">
+            修改时间
+            <el-icon v-if="sortBy === 'date'" class="sort-icon">
+              <ArrowUp v-if="sortOrder === 'asc'" />
+              <ArrowDown v-else />
+            </el-icon>
+          </div>
           <div class="list-col actions">操作</div>
         </div>
         <div
@@ -74,20 +96,21 @@
           class="list-item"
           @click="handleItemClick(item)"
           @dblclick="handleItemDoubleClick(item)"
+          @contextmenu="handleRightClick($event, item)"
         >
           <div class="list-col name">
             <div class="item-name">
               <el-icon v-if="item.type === 'folder'" class="item-icon folder">
-                <folder />
+                <Folder />
               </el-icon>
               <el-icon v-else-if="isImageFile(item)" class="item-icon image">
-                <picture />
+                <Picture />
               </el-icon>
               <el-icon v-else-if="isVideoFile(item)" class="item-icon video">
-                <video-play />
+                <VideoPlay />
               </el-icon>
               <el-icon v-else class="item-icon file">
-                <document />
+                <Document />
               </el-icon>
               <span class="name-text" :title="item.name">{{ item.name }}</span>
             </div>
@@ -97,7 +120,7 @@
           <div class="list-col actions">
             <el-dropdown @command="(cmd) => handleAction(cmd, item)" trigger="click">
               <button class="action-menu-btn">
-                <el-icon><more-filled /></el-icon>
+                <el-icon><MoreFilled /></el-icon>
               </button>
               <template #dropdown>
                 <el-dropdown-menu>
@@ -118,6 +141,7 @@
           :key="item.id"
           class="image-card"
           @click="handleItemClick(item)"
+          @contextmenu="handleRightClick($event, item)"
         >
           <div class="image-thumbnail">
             <img :src="item.thumbnail" :alt="item.name" class="thumbnail-img" />
@@ -128,27 +152,72 @@
 
       <!-- 空状态 -->
       <div v-if="filteredFiles.length === 0" class="empty-state">
-        <el-icon class="empty-icon"><folder-opened /></el-icon>
+        <el-icon class="empty-icon"><FolderOpened /></el-icon>
         <p class="empty-text">此文件夹为空</p>
         <p class="empty-subtitle">拖拽文件到此处上传，或点击上传按钮</p>
+      </div>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div
+      v-show="contextMenuVisible"
+      class="context-menu"
+      :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
+    >
+      <div v-if="selectedItem">
+        <!-- 如果用户已登录，显示所有选项 -->
+        <template v-if="userLoggedIn">
+          <div class="context-menu-item" @click="handleContextMenuAction('copy-link', selectedItem)">
+            <el-icon><Link /></el-icon>
+            <span>复制链接</span>
+          </div>
+          <div class="context-menu-item" @click="handleContextMenuAction('download', selectedItem)">
+            <el-icon><Download /></el-icon>
+            <span>下载</span>
+          </div>
+          <div class="context-menu-divider"></div>
+          <div class="context-menu-item" @click="handleContextMenuAction('rename', selectedItem)">
+            <el-icon><Edit /></el-icon>
+            <span>重命名</span>
+          </div>
+          <div class="context-menu-item" @click="handleContextMenuAction('move', selectedItem)">
+            <el-icon><Rank /></el-icon>
+            <span>移动</span>
+          </div>
+          <div class="context-menu-divider"></div>
+          <div class="context-menu-item danger" @click="handleContextMenuAction('delete', selectedItem)">
+            <el-icon><Delete /></el-icon>
+            <span>删除</span>
+          </div>
+        </template>
+        
+        <!-- 如果用户未登录，只显示下载选项 -->
+        <template v-else>
+          <div class="context-menu-item" @click="handleContextMenuAction('download', selectedItem)">
+            <el-icon><Download /></el-icon>
+            <span>下载</span>
+          </div>
+        </template>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   UploadFilled, FolderAdd, Search, Folder, Picture, VideoPlay,
-  Document, MoreFilled, FolderOpened
+  Document, MoreFilled, FolderOpened, ArrowUp, ArrowDown,
+  Link, Download, Edit, Delete, Rank
 } from '@element-plus/icons-vue'
+import { isAuthenticated } from '../utils/auth.js'
 
 // 接收props
 const props = defineProps({
   viewMode: {
     type: String,
-    default: 'grid'
+    default: 'list'
   }
 })
 
@@ -163,6 +232,16 @@ const searchQuery = ref('')
 
 // 当前路径
 const currentPath = ref('')
+
+// 排序状态
+const sortBy = ref('')
+const sortOrder = ref('asc') // 'asc' | 'desc'
+
+// 右键菜单状态
+const contextMenuVisible = ref(false)
+const contextMenuX = ref(0)
+const contextMenuY = ref(0)
+const selectedItem = ref(null)
 
 // 模拟文件数据
 const files = ref([
@@ -220,11 +299,40 @@ const files = ref([
 
 // 过滤后的文件列表
 const filteredFiles = computed(() => {
-  if (!searchQuery.value) return files.value
+  let result = files.value
   
-  return files.value.filter(file =>
-    file.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-  )
+  // 搜索过滤
+  if (searchQuery.value) {
+    result = result.filter(file =>
+      file.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    )
+  }
+  
+  // 排序
+  if (sortBy.value) {
+    result = [...result].sort((a, b) => {
+      let aValue, bValue
+      
+      if (sortBy.value === 'size') {
+        aValue = a.size || 0
+        bValue = b.size || 0
+      } else if (sortBy.value === 'date') {
+        aValue = new Date(a.modifiedAt || 0)
+        bValue = new Date(b.modifiedAt || 0)
+      } else if (sortBy.value === 'name') {
+        aValue = a.name.toLowerCase()
+        bValue = b.name.toLowerCase()
+      }
+      
+      if (sortOrder.value === 'asc') {
+        return aValue > bValue ? 1 : -1
+      } else {
+        return aValue < bValue ? 1 : -1
+      }
+    })
+  }
+  
+  return result
 })
 
 // 过滤图片文件
@@ -332,6 +440,85 @@ const createFolder = () => {
   ElMessage.info('新建文件夹功能开发中...')
 }
 
+// 处理排序
+const handleSort = (column) => {
+  if (sortBy.value === column) {
+    // 如果点击的是当前排序列，切换排序方向
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    // 如果点击的是新列，设置新的排序列并重置为升序
+    sortBy.value = column
+    sortOrder.value = 'asc'
+  }
+}
+
+// 处理右键菜单
+const handleRightClick = (event, item) => {
+  event.preventDefault()
+  selectedItem.value = item
+  
+  // 计算菜单位置，防止超出视窗
+  const menuWidth = 160
+  const menuHeight = userLoggedIn.value ? 200 : 50
+  
+  let x = event.clientX
+  let y = event.clientY
+  
+  // 如果菜单会超出右边界，向左偏移
+  if (x + menuWidth > window.innerWidth) {
+    x = window.innerWidth - menuWidth - 10
+  }
+  
+  // 如果菜单会超出下边界，向上偏移
+  if (y + menuHeight > window.innerHeight) {
+    y = window.innerHeight - menuHeight - 10
+  }
+  
+  contextMenuX.value = x
+  contextMenuY.value = y
+  contextMenuVisible.value = true
+  
+  // 添加全局点击事件监听，点击其他地方关闭菜单
+  nextTick(() => {
+    document.addEventListener('click', hideContextMenu)
+  })
+}
+
+// 隐藏右键菜单
+const hideContextMenu = () => {
+  contextMenuVisible.value = false
+  selectedItem.value = null
+  document.removeEventListener('click', hideContextMenu)
+}
+
+// 处理右键菜单操作
+const handleContextMenuAction = (action, item) => {
+  hideContextMenu()
+  
+  switch (action) {
+    case 'copy-link':
+      // 复制链接
+      navigator.clipboard.writeText(`http://localhost:3000/file/${item.id}`)
+      ElMessage.success(`已复制 "${item.name}" 的链接`)
+      break
+    case 'download':
+      ElMessage.success(`正在下载：${item.name}`)
+      break
+    case 'rename':
+      ElMessage.info('重命名功能开发中...')
+      break
+    case 'move':
+      ElMessage.info('移动功能开发中...')
+      break
+    case 'delete':
+      ElMessage.warning(`确认删除：${item.name}？`)
+      break
+  }
+}
+
+// 检查用户是否已登录
+const userLoggedIn = computed(() => isAuthenticated())
+
 // 监听Layout组件的视图切换事件
 const handleViewChange = (mode) => {
   viewMode.value = mode
@@ -348,6 +535,14 @@ onMounted(() => {
 // 监听props变化
 watch(() => props.viewMode, (newMode) => {
   viewMode.value = newMode
+})
+
+// 组件卸载时清理
+onUnmounted(() => {
+  document.removeEventListener('click', hideContextMenu)
+  window.removeEventListener('view-change', (event) => {
+    handleViewChange(event.detail)
+  })
 })
 
 // 暴露方法给Layout组件
@@ -558,6 +753,22 @@ defineExpose({
   font-size: 14px;
 }
 
+.list-col.sortable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  user-select: none;
+  gap: 4px;
+}
+
+.list-col.sortable:hover {
+  color: #6e8b67;
+}
+
+.sort-icon {
+  font-size: 12px;
+  color: #a9c3a6;
+}
+
 .item-name {
   display: flex;
   align-items: center;
@@ -682,6 +893,58 @@ defineExpose({
   font-size: 14px;
   opacity: 0.8;
   color: #6e8b67;
+}
+
+/* 右键菜单 */
+.context-menu {
+  position: fixed;
+  background-color: #fffcf6;
+  border: 1px solid #e4ddd3;
+  border-radius: 15px;
+  box-shadow: 0 8px 24px rgba(156, 148, 134, 0.15);
+  z-index: 1000;
+  min-width: 160px;
+  padding: 6px 0;
+  font-size: 14px;
+  user-select: none;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #4a593d;
+}
+
+.context-menu-item:hover {
+  background-color: #f5f5f1;
+  color: #6e8b67;
+}
+
+.context-menu-item.danger {
+  color: #d73527;
+}
+
+.context-menu-item.danger:hover {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background-color: #e4ddd3;
+  margin: 6px 0;
+}
+
+.context-menu-item .el-icon {
+  font-size: 16px;
+}
+
+.context-menu-item span {
+  font-weight: 500;
 }
 
 /* 响应式设计 */

@@ -13,7 +13,7 @@
 import { ref } from 'vue'
 
 // 视图模式状态
-const viewMode = ref('grid')
+const viewMode = ref('list')
 
 // 当前路径状态
 const currentPath = ref('')
